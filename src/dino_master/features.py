@@ -22,6 +22,19 @@ TYPE_CODES = {
     "PTERODACTYL_HIGH": 5,
 }
 
+# Порядок 24 признаков, которые видит сеть:
+#  0      TTC первого препятствия
+#  1..6   one-hot типа первого (none + 5 типов)
+#  7      высота первого
+#  8      ширина первого
+#  9..17  то же для второго препятствия
+#  18     gap между первым и вторым
+#  19     текущая скорость / 13
+#  20     dino.jumping
+#  21     dino.ducking
+#  22     высота динозавра / 150
+#  23     dino.speedDrop
+
 
 def _clip(value: float, low: float = 0.0, high: float = 1.0) -> float:
     return max(low, min(high, value))
@@ -38,6 +51,7 @@ def type_code(item: dict[str, Any] | None) -> int:
     if obstacle_type == "PTERODACTYL":
         raw_height = item.get("yPos")
         height = float(raw_height) if isinstance(raw_height, (int, float)) else 0.0
+        # Чем выше птица, тем больше code: low=3, mid=4, high=5.
         if height >= 90:
             return TYPE_CODES["PTERODACTYL_LOW"]
         if height >= 65:
@@ -102,11 +116,13 @@ def observation_features(obs: dict[str, Any]) -> list[float]:
     features.append(_y_feature(first))
     features.append(_width_feature(first))
 
+    # Второе препятствие важно для птиц и групповых кактусов.
     features.append(_ttc_feature(second))
     features.extend(_one_hot(type_code(second)))
     features.append(_y_feature(second))
     features.append(_width_feature(second))
 
+    # Если второе препятствие далеко/отсутствует, gap считается «свободным».
     if _has_obstacle(second):
         first_distance = float((first or {}).get("distance") or 0.0)
         second_distance = float((second or {}).get("distance") or 0.0)
@@ -114,6 +130,7 @@ def observation_features(obs: dict[str, Any]) -> list[float]:
     else:
         features.append(1.0)
 
+    # Состояние самого динозавра: скорость, прыжок, присед, высота, speedDrop.
     features.append(_clip(speed / 13.0))
     features.append(1.0 if dino.get("jumping") else 0.0)
     features.append(1.0 if dino.get("ducking") else 0.0)
@@ -130,6 +147,7 @@ def observation_features(obs: dict[str, Any]) -> list[float]:
 
 def valid_actions(obs: dict[str, Any]) -> list[int]:
     """Маска: присед без препятствия и прыжок в воздухе запрещены."""
+    # Без препятствия duck бессмыслен; в воздухе нельзя начинать новый прыжок.
     actions = [0, 1, 2] if _has_obstacle(obs.get("first")) else [0, 1]
     if (obs.get("dino") or {}).get("jumping"):
         actions = [action for action in actions if action != 1]
@@ -139,10 +157,13 @@ def valid_actions(obs: dict[str, Any]) -> list[int]:
 def resolve_action(action: int, duck_remaining: int) -> tuple[int, int]:
     """Удерживать присед несколько кадров; прыжок отменяет удержание."""
     if action == 1:
+        # Прыжок всегда сбрасывает удержание duck.
         return 1, 0
     if action == 2:
+        # Начали присед — держим его DUCK_HOLD_STEPS кадров.
         return 2, DUCK_HOLD_STEPS - 1
     if duck_remaining > 0:
+        # Сеть выбрала 0, но удержание ещё не истекло.
         return 2, duck_remaining - 1
     return 0, 0
 
@@ -151,6 +172,7 @@ def curriculum_speed(generation: int, stage_gens: int = 5) -> float | None:
     """Фиксированная скорость для поколения (с 1); ``None`` — естественный разгон."""
     if stage_gens < 1:
         raise ValueError(f"stage_gens должно быть положительным, получено {stage_gens}")
+    # 1..5 → 6, 6..10 → 8, 11..15 → 10, 16..20 → 13, дальше natural.
     stage = max(0, (generation - 1) // stage_gens)
     if stage < len(CURRICULUM_SPEEDS):
         return CURRICULUM_SPEEDS[stage]
@@ -158,4 +180,6 @@ def curriculum_speed(generation: int, stage_gens: int = 5) -> float | None:
 
 
 def episode_fitness(steps: int, clears: int, max_steps: int) -> float:
+    # Выживание важнее всего; препятствия дают небольшой бонус,
+    # а полный горизонт — большой терминальный бонус.
     return steps + 5 * clears + (TERMINAL_BONUS if steps >= max_steps else 0.0)

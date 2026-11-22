@@ -109,6 +109,7 @@ GET_OBSERVATION_JS = """() => {
 
 async def _launch(playwright: Any, *, headless: bool) -> Any:
     PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+    # Эти флаги не дают Chrome затормозить/остановить rAF в неактивном окне.
     args = [
         "--window-size=960,540",
         "--disable-gpu",
@@ -216,6 +217,7 @@ async def run_episode(
     duck_held = False
     jump_cooldown = 0
     try:
+        # Один шаг = observation → features → network → action.
         for _ in range(max_steps):
             values = features.observation_features(obs)
             valid = features.valid_actions(obs)
@@ -237,6 +239,7 @@ async def run_episode(
                 return steps, next_status
             obs = next_obs
     finally:
+        # Не оставляем ArrowDown зажатой после смерти/исключения.
         if duck_held:
             with contextlib.suppress(Exception):
                 await apply_action(page, 0, True)

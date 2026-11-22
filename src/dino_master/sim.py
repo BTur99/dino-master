@@ -15,6 +15,7 @@ from typing import Any, Final
 
 FPS: Final[int] = 60
 DT_MS: Final[float] = 1000.0 / FPS
+# Координаты игры: (0,0) — левый верхний угол canvas 600×150.
 GROUND_Y: Final[int] = 93
 TREX_X: Final[int] = 50
 
@@ -186,12 +187,15 @@ class TRex:
     def update_frame(self) -> None:
         """Один кадр ``updateJump`` (``framesElapsed`` == 1)."""
 
+        # Как в оригинале: при speedDrop падение в 3 раза быстрее,
+        # а высота округляется как Math.round в JS.
         if self.speed_drop:
             self.y += js_round(self.vy * SPEED_DROP_COEFFICIENT)
         else:
             self.y += js_round(self.vy)
         self.vy += GRAVITY
 
+        # reachedMinHeight и endJump ограничивают скорость наверху дуги.
         if self.y < self.ground - MIN_JUMP_HEIGHT or self.speed_drop:
             self.reached_min_height = True
 
@@ -202,6 +206,7 @@ class TRex:
         ):
             self.vy = DROP_V
 
+        # Приземление: сброс всех флагов и счётчик прыжка.
         if self.y > self.ground:
             was_jumping = self.jumping
             self.y = self.ground
@@ -215,6 +220,9 @@ class TRex:
                 self.jump_count += 1
 
     def apply_action(self, action: int, speed: float) -> None:
+        # 1 — прыжок (из duck сначала отпускаем присед),
+        # 2 — присед на земле или ускоренное падение в воздухе,
+        # 0 — отпустить duck/speedDrop.
         if action == 1:
             if self.ducking:
                 self.set_duck(False)
@@ -294,15 +302,18 @@ class Obstacle:
         self.following = False
 
     def update_frame(self, speed: float) -> None:
+        # Птицы летят быстрее/медленнее горизонта на speedOffset.
         move_speed = speed + self.speed_offset if self.type.speed_offset else speed
         self.x -= math.floor(move_speed)
 
+        # Анимация птицы (2 кадра); для кактусов num_frames == 0.
         if self.type.num_frames:
             self.timer += DT_MS
             if self.timer >= self.type.frame_rate:
                 self.current_frame = (self.current_frame + 1) % self.type.num_frames
                 self.timer = 0.0
 
+        # Как только препятствие ушло за левый край — удаляем.
         if self.x + self.width <= 0:
             self.remove = True
 
@@ -422,6 +433,7 @@ class SimWorld:
         if self.all_dead:
             return
 
+        # 1. Действия и физика каждого живого динозавра.
         for index, dino in enumerate(self.dinos):
             if not self.alive[index]:
                 continue
@@ -430,12 +442,14 @@ class SimWorld:
                 dino.update_frame()
             self.steps[index] += 1
 
+        # 2. Горизонт: задержка старта, движение и спавн препятствий.
         self.running_time_ms += DT_MS
         has_obstacles = self.running_time_ms > self.config.clear_time_ms
 
         if has_obstacles:
             self._update_obstacles()
 
+        # 3. Коллизия только с первым препятствием, как в оригинале.
         if has_obstacles and self.obstacles:
             first_obstacle = self.obstacles[0]
             for index, dino in enumerate(self.dinos):
@@ -444,6 +458,7 @@ class SimWorld:
                 if check_collision(first_obstacle, dino):
                     self.alive[index] = False
 
+        # 4. Пройденные препятствия: id исчез из first/second → +1 clear.
         ahead = self._ahead_obstacles()
         first_id = ahead[0].id if ahead else None
         second_id = ahead[1].id if len(ahead) > 1 else None
@@ -455,6 +470,7 @@ class SimWorld:
                 self.clears[index] += 1
             self.last_first_id[index] = first_id
 
+        # 5. Дистанция и естественный разгон (при fixed speed acceleration=0).
         if self.alive_count:
             self.distance += self.current_speed
             if self.acceleration and self.current_speed < MAX_SPEED:
@@ -521,6 +537,8 @@ class SimWorld:
             obstacle.update_frame(self.current_speed)
         self.obstacles = [obstacle for obstacle in self.obstacles if not obstacle.remove]
 
+        # Новое препятствие появляется, когда последнее достаточно уехало влево
+        # с учётом его gap. Если препятствий нет — создаём сразу.
         if self.obstacles:
             last_obstacle = self.obstacles[-1]
             if (
@@ -534,6 +552,8 @@ class SimWorld:
             self._add_new_obstacle()
 
     def _add_new_obstacle(self) -> None:
+        # Повторяем выбор, пока тип недоступен по скорости
+        # или пока не нарушено правило двух одинаковых подряд.
         while True:
             type_config = self.rng.choice(OBSTACLE_TYPES)
             if (

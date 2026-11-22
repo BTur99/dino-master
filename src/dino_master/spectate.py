@@ -74,6 +74,8 @@ async def main(argv: list[str] | None = None) -> None:
                     await real_game._sleep(2.0)
                     continue
                 try:
+                    # Перечитываем pkl каждый эпизод: если обучение обновило
+                    # чемпиона, следующий запуск будет уже с новой сетью.
                     with best_path.open("rb") as handle:
                         genome = pickle.load(handle)
                     network = neat.nn.FeedForwardNetwork.create(genome, config)

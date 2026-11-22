@@ -47,6 +47,7 @@ def run_sim_episode(
     duck_remaining = [0] * count
     jump_cooldown = [0] * count
 
+    # Один кадр = одно решение для каждого живого генома.
     for _step in range(max_steps):
         actions = [0] * count
         for index in range(count):
@@ -73,6 +74,7 @@ def run_sim_episode(
         if world.all_dead:
             break
 
+    # Fitness: выживание + бонус за препятствия + бонус за полный горизонт.
     fitness = [
         features.episode_fitness(world.steps[i], world.clears[i], max_steps)
         for i in range(count)
@@ -117,6 +119,7 @@ def evaluate_genomes(
     steps_total = [0] * count
     clears_total = [0] * count
 
+    # Несколько разных seed снижают удачу на одном потоке препятствий.
     for episode in range(1, episodes + 1):
         fitnesses, stats = run_sim_episode(
             genomes, config, max_steps=max_steps, speed=speed, seed=seed + episode
@@ -197,6 +200,7 @@ def main(argv: list[str] | None = None) -> None:
     population.add_reporter(BestGenomeReporter(args.best))
 
     def eval_genomes(genomes: list[tuple[int, Any]], cfg: Any) -> None:
+        # population.generation ещё не увеличен внутри NEAT — передаём 1-based.
         generation = population.generation + 1
         speed = features.curriculum_speed(generation, args.curriculum_gens)
         evaluate_genomes(

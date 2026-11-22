@@ -51,6 +51,8 @@ function ttc(item) {
   return clamp(item.distance / item.speed / 150);
 }
 
+// 24 признака идут ровно в том же порядке, что в Python `features.py`.
+// Иначе JSON-сеть получит не те числа и политика развалится.
 function features(obs) {
   const first = obs.first;
   const second = obs.second;
@@ -84,6 +86,8 @@ function resolveAction(action, remaining) {
 }
 
 function activation(kind, value) {
+  // ВАЖНО: NEAT 2.0 масштабирует tanh на 2.5, sigmoid на 5.
+  // Это не обычные math.tanh/math.sigmoid; иначе выходы не совпадут с Python.
   if (kind === "tanh") {
     return Math.tanh(Math.max(-60, Math.min(60, 2.5 * value)));
   }
@@ -116,6 +120,7 @@ function describe(obstacle, dino, speed) {
 }
 
 function observation(runner) {
+  // Собираем те же first/second/speed/dino, что отдаёт Python-симулятор.
   const dino = runner.tRex;
   const speed = runner.currentSpeed || 0;
   const obstacles = (runner.horizon && runner.horizon.obstacles) || [];
@@ -169,6 +174,8 @@ function drawStats() {
 }
 
 function prepareFrame() {
+  // Оригинальная игра создаёт canvas внутри #main-frame-error.
+  // Поэтому контейнер нельзя скрывать display:none — только чистим offline-контент.
   const doc = frame.contentDocument;
   const body = doc.body;
   body.style.margin = "0";
@@ -191,6 +198,8 @@ function prepareFrame() {
 }
 
 function restartGame() {
+  // stop() отменяет старый rAF, restart() запускает новую игру.
+  // xPos=50 — та же стартовая точка, что в Python-симуляторе.
   const runner = state.runner;
   if (runner.outerContainerEl) {
     runner.outerContainerEl.style.width = "600px";
@@ -245,6 +254,8 @@ function tick() {
     return;
   }
 
+  // Главный цикл браузерной версии:
+  // observation → features → network → valid action → apply → game step.
   const obs = observation(runner);
   const values = features(obs);
   const actions = validActions(obs);

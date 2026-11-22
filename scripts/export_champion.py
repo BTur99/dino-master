@@ -23,6 +23,8 @@ def _activation(name: str) -> str:
 
 
 def export(genome: Any, config: neat.Config) -> dict[str, Any]:
+    # В JSON кладём «сырые» веса из генома. Масштабирование активаций
+    # (tanh×2.5, sigmoid×5) выполняет уже JS/Python при вычислении.
     inputs = list(config.genome_config.input_keys)
     outputs = list(config.genome_config.output_keys)
     weights: list[list[float]] = []
