@@ -1,9 +1,9 @@
-"""Pure-Python port of the Chrome Dino physics, spawning, and collisions.
+"""Чистый Python-порт физики Chrome Dino, спавна и коллизий.
 
-This module mirrors ``vendor/t-rex-runner/index.js`` closely enough to train or
-evaluate agents without a browser. It has no Playwright, NumPy, or torch
-dependency, and all randomness is routed through a caller-owned ``random.Random``
-instance so runs are deterministic for a given seed.
+Модуль повторяет ``vendor/t-rex-runner/index.js`` достаточно точно, чтобы
+обучать и проверять агентов без браузера. Без Playwright, NumPy и torch;
+вся случайность идёт через ``random.Random``, поэтому запуск детерминирован
+при заданном seed.
 """
 
 from __future__ import annotations
@@ -43,14 +43,14 @@ GAP_COEFFICIENT: Final[float] = 0.6
 
 
 def js_round(value: float) -> int:
-    """Return JavaScript ``Math.round`` for finite values."""
+    """Аналог JavaScript ``Math.round`` для конечных чисел."""
 
     return math.floor(value + 0.5)
 
 
 @dataclass
 class CollisionBox:
-    """Axis-aligned collision box."""
+    """Выровненный по осям collision box."""
 
     x: int
     y: int
@@ -60,7 +60,7 @@ class CollisionBox:
 
 @dataclass
 class ObstacleType:
-    """Immutable-ish obstacle definition copied from the game source."""
+    """Описание препятствия, скопированное из исходника игры."""
 
     name: str
     width: int
@@ -147,7 +147,7 @@ _DUCKING_BOXES: Final[tuple[CollisionBox, ...]] = (
 
 @dataclass
 class TRex:
-    """Dino state and jump physics."""
+    """Состояние динозавра и физика прыжка."""
 
     x: int = TREX_X
     y: float = GROUND_Y
@@ -184,7 +184,7 @@ class TRex:
         self.jump_count = 0
 
     def update_frame(self) -> None:
-        """Advance one ``updateJump`` frame (``framesElapsed`` == 1)."""
+        """Один кадр ``updateJump`` (``framesElapsed`` == 1)."""
 
         if self.speed_drop:
             self.y += js_round(self.vy * SPEED_DROP_COEFFICIENT)
@@ -231,7 +231,7 @@ class TRex:
             if self.speed_drop:
                 self.speed_drop = False
         else:
-            raise ValueError(f"unknown action: {action!r}")
+            raise ValueError(f"неизвестное действие: {action!r}")
 
     def t_rex_box(self) -> CollisionBox:
         return CollisionBox(
@@ -246,7 +246,7 @@ class TRex:
 
 
 class Obstacle:
-    """One spawned obstacle, including dynamic collision boxes and gap."""
+    """Одно препятствие: динамические collision box и зазор."""
 
     def __init__(
         self,
@@ -315,7 +315,7 @@ class Obstacle:
 
 @dataclass
 class SimConfig:
-    """World configuration."""
+    """Конфигурация мира."""
 
     dino_count: int
     max_steps: int
@@ -325,7 +325,7 @@ class SimConfig:
 
 
 def box_compare(left: CollisionBox, right: CollisionBox) -> bool:
-    """Strict axis-aligned bounding-box intersection."""
+    """Строгое пересечение AABB."""
 
     return (
         left.x < right.x + right.width
@@ -345,7 +345,7 @@ def _adjusted_box(box: CollisionBox, adjustment: CollisionBox) -> CollisionBox:
 
 
 def check_collision(obstacle: Obstacle, t_rex: TRex) -> bool:
-    """Match ``checkForCollision`` using the outer and detailed boxes."""
+    """Аналог ``checkForCollision``: внешний и детальные боксы."""
 
     obstacle_box = CollisionBox(
         x=obstacle.x + 1,
@@ -368,7 +368,7 @@ def check_collision(obstacle: Obstacle, t_rex: TRex) -> bool:
 
 
 class SimWorld:
-    """Browser-free stand-in for ``Runner`` plus ``Horizon``."""
+    """Заменитель ``Runner`` и ``Horizon`` без браузера."""
 
     def __init__(self, config: SimConfig) -> None:
         self.config = config
@@ -417,7 +417,7 @@ class SimWorld:
     def step(self, actions: list[int]) -> None:
         if len(actions) != self.config.dino_count:
             raise ValueError(
-                f"expected {self.config.dino_count} actions, got {len(actions)}"
+                f"ожидалось {self.config.dino_count} действий, получено {len(actions)}"
             )
         if self.all_dead:
             return

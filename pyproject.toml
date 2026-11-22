@@ -1,7 +1,7 @@
 [project]
 name = "dino-master"
 version = "1.0.0"
-description = "Chrome Dino NEAT trained in a pure-Python simulator"
+description = "Chrome Dino NEAT: обучение в чистом Python-симуляторе"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

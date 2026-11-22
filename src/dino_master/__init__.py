@@ -1,3 +1,3 @@
-"""Browser-free Chrome Dino simulator and NEAT training."""
+"""Симулятор Chrome Dino и обучение NEAT без браузера."""
 
 __version__ = "1.0.0"

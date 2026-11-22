@@ -1,74 +1,73 @@
 # dino-master
 
-Chrome Dino NEAT agent trained in a **pure-Python simulator**, then verified on the real game.
+Агент для Chrome Dino на NEAT: обучение в **чистом Python-симуляторе**, затем проверка на реальной игре.
 
-## Result
+## Результат
 
-The shipped champion (`models/champion-7553.pkl`) cleared **40,000 steps** on the public
-[wayou/t-rex-runner](https://wayou.github.io/t-rex-runner/) game. Reproduce with `dino-eval`:
+Чемпион `models/champion-7553.pkl` прошёл **40 000 шагов** на публичной игре
+[wayou/t-rex-runner](https://wayou.github.io/t-rex-runner/). Воспроизведение — через `dino-eval`:
 
-| run | steps | time at 60 Hz |
+| запуск | шаги | время при 60 Гц |
 |---|---:|---:|
-| remote 1 | 40,000 | ~10.7 min |
-| remote 2 | 40,000 | ~10.7 min |
-| remote 3 | 40,000 | ~10.7 min |
-| local vendored | 40,000 | ~10.7 min |
-| this repo (`dino-eval`) | 40,000 | ~10.7 min |
+| публичный сайт, 1 | 40 000 | ~10.7 мин |
+| публичный сайт, 2 | 40 000 | ~10.7 мин |
+| публичный сайт, 3 | 40 000 | ~10.7 мин |
+| локальная копия | 40 000 | ~10.7 мин |
+| этот репозиторий (`dino-eval`) | 40 000 | ~10.7 мин |
 
-The genome is tiny: 3 nodes / 4 connections.
+Геном совсем небольшой: 3 узла / 4 связи.
 
-## Quick start
+## Быстрый старт
 
 ```bash
 uv sync
 uv run dino-train --generations 50 --population 500 --max-steps 30000 \
   --episodes-per-gen 4 --best models/best.pkl
 
-# real-game evaluation (Google Chrome)
+# проверка на реальной игре (Google Chrome)
 uv sync --extra real
 uv run dino-eval --genome models/champion-7553.pkl --episodes 3 \
   --max-steps 40000 --out eval.json
 
-# watch the champion play
+# посмотреть, как играет чемпион
 uv run dino-spectate --genome models/champion-7553.pkl
 ```
 
-Set `DINO_CHROME_EXECUTABLE` if Chrome is not auto-detected. `DINO_HEADLESS=1` runs the
-real-game checks headless.
+Если Chrome не найден автоматически, задайте `DINO_CHROME_EXECUTABLE`.
+`DINO_HEADLESS=1` запускает проверку без видимого окна.
 
-## How it works
+## Как это работает
 
-- `src/dino_master/sim.py` — exact port of Dino physics, obstacles, gaps and collision
-  boxes from the original `index.js`.
-- `src/dino_master/features.py` — 24 observation features, action mask, duck hold,
-  jump cooldown, curriculum and fitness.
-- `src/dino_master/train.py` — NEAT evolution inside the simulator. 500 genomes, 60 Hz,
-  no browser. Fitness: `steps + 5 * clears + 1000` for reaching `max_steps`.
-- `src/dino_master/real_game.py` — Playwright/Chrome evaluation on the public game.
-- `src/dino_master/spectate.py` — visible window with the current genome.
+- `src/dino_master/sim.py` — точный порт физики Dino, препятствий, зазоров и
+  collision box из оригинального `index.js`.
+- `src/dino_master/features.py` — 24 признака наблюдения, маска действий,
+  удержание приседа, cooldown прыжка, curriculum и fitness.
+- `src/dino_master/train.py` — эволюция NEAT в симуляторе: 500 геномов, 60 Гц,
+  без браузера. Fitness: `шаги + 5 × препятствия + 1000` за достижение `max_steps`.
+- `src/dino_master/real_game.py` — проверка через Playwright/Chrome на публичной игре.
+- `src/dino_master/spectate.py` — видимое окно с текущим геномом.
 
-Training uses 4 independent episodes per generation and curriculum speeds
-`6 → 8 → 10 → 13` (5 generations each), then natural acceleration.
+Обучение использует 4 независимых эпизода на поколение и curriculum
+`6 → 8 → 10 → 13` (по 5 поколений), затем естественный разгон.
 
-## Repo layout
+## Структура
 
 ```text
-src/dino_master/neat.ini  NEAT config (24 → 3, pop 500)
-models/                champion pickle
-src/dino_master/       simulator, features, training, eval, spectator
-tests/                 browser-free unit tests
+src/dino_master/neat.ini  конфиг NEAT (24 → 3, pop 500)
+models/                   pickle чемпиона
+src/dino_master/          симулятор, признаки, обучение, eval, spectator
+tests/                    unit-тесты без браузера
 ```
 
-## Limitations
+## Ограничения
 
-- The champion is a tiny reactive network; it is validated on the public game, but a
-  single report is not an exhaustive benchmark.
-- Real-game evaluation needs Google Chrome and network access.
-- `step_delay=0.016` matches 60 Hz; the browser window must stay focused/active.
-- The failed pterodactyl-bonus experiment is intentionally not part of this repository.
+- Чемпион — маленькая реактивная сеть; результат проверен на публичной игре,
+  но один отчёт не заменяет полный бенчмарк.
+- Для реальной проверки нужны Google Chrome и доступ в сеть.
+- `step_delay=0.016` соответствует 60 Гц; окно браузера должно быть активным.
+- Неудачный эксперимент с бонусом за птеродактилей в репозиторий не включён.
 
-## Credits
+## Благодарности
 
-Chrome Dino by the Chromium Authors; public runner by
-[wayou](https://github.com/wayou/t-rex-runner). This repository contains no vendored
-game assets.
+Chrome Dino — Chromium Authors; публичная версия — [wayou](https://github.com/wayou/t-rex-runner).
+В этом репозитории нет копии игровых ассетов.

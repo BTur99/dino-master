@@ -1,4 +1,4 @@
-"""Watch the current best genome play in a visible Chrome window."""
+"""Показ текущего лучшего генома в видимом окне Chrome."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ DEFAULT_GENOME = "models/champion-7553.pkl"
 
 
 async def _badge(page: Any, genome: Any) -> None:
-    label = f"Genome {getattr(genome, 'key', '?')}"
+    label = f"Геном {getattr(genome, 'key', '?')}"
     with contextlib.suppress(Exception):
         await page.evaluate(
             """(label) => {
@@ -38,7 +38,10 @@ async def _badge(page: Any, genome: Any) -> None:
 
 
 async def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="dino-spectate")
+    parser = argparse.ArgumentParser(
+        prog="dino-spectate",
+        description="Показ лучшего генома NEAT в реальной игре",
+    )
     parser.add_argument("--genome", default=DEFAULT_GENOME)
     parser.add_argument("--url", default=real_game.DEFAULT_URL)
     parser.add_argument("--config", default=str(real_game.DEFAULT_CONFIG))
@@ -67,7 +70,7 @@ async def main(argv: list[str] | None = None) -> None:
             await real_game._style(page)
             while True:
                 if not best_path.is_file():
-                    print(f"waiting for {best_path}")
+                    print(f"ожидание {best_path}")
                     await real_game._sleep(2.0)
                     continue
                 try:
@@ -75,7 +78,7 @@ async def main(argv: list[str] | None = None) -> None:
                         genome = pickle.load(handle)
                     network = neat.nn.FeedForwardNetwork.create(genome, config)
                 except Exception as error:
-                    print(f"cannot load {best_path}: {error}")
+                    print(f"не удалось загрузить {best_path}: {error}")
                     await real_game._sleep(2.0)
                     continue
                 await _badge(page, genome)
@@ -86,7 +89,10 @@ async def main(argv: list[str] | None = None) -> None:
                     max_steps=args.max_steps,
                     step_delay=args.step_delay,
                 )
-                print(f"genome={getattr(genome, 'key', '?')} steps={steps} status={status}")
+                print(
+                    f"геном={getattr(genome, 'key', '?')} "
+                    f"шаги={steps} статус={status}"
+                )
                 await real_game._sleep(0.5)
         finally:
             await context.close()

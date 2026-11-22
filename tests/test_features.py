@@ -1,4 +1,4 @@
-"""Tests for observation/action helpers."""
+"""Тесты признаков и действий."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Unit tests for browser-free NEAT training."""
+"""Unit-тесты обучения NEAT без браузера."""
 
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ def test_reporter_persists_only_improvements(
 
     reporter.post_evaluate(config, None, species, genome)
     assert best_path.is_file()
-    assert "Gen 1" in capsys.readouterr().out
+    assert "Поколение 1" in capsys.readouterr().out
     with best_path.open("rb") as handle:
         assert pickle.load(handle).fitness == pytest.approx(42.0)
 

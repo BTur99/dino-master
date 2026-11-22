@@ -1,4 +1,4 @@
-"""Train NEAT genomes in the browser-free Dino simulator."""
+"""Обучение NEAT в симуляторе Dino без браузера."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ LAST_STATS: dict[str, float] = {}
 
 def choose_action(outputs: list[float], valid: list[int]) -> int:
     if not valid:
-        raise ValueError("valid_actions must not be empty")
+        raise ValueError("valid_actions не должен быть пустым")
     return max(valid, key=lambda action: float(outputs[action]))
 
 
@@ -109,7 +109,7 @@ def evaluate_genomes(
     seed: int,
 ) -> None:
     if episodes < 1:
-        raise ValueError(f"episodes must be positive, got {episodes}")
+        raise ValueError(f"episodes должно быть положительным, получено {episodes}")
     if not genomes:
         return
     count = len(genomes)
@@ -154,7 +154,7 @@ class BestGenomeReporter(neat.reporting.BaseReporter):
                     pickle.dump(best_genome, handle)
         stats = LAST_STATS
         print(
-            f"Gen {self.generation}: best={stats.get('best', 0):.0f} "
+            f"Поколение {self.generation}: best={stats.get('best', 0):.0f} "
             f"median={stats.get('median', 0):.0f} "
             f"mean={stats.get('mean', 0):.0f} "
             f"steps={stats.get('steps', 0):.0f} "
@@ -163,7 +163,10 @@ class BestGenomeReporter(neat.reporting.BaseReporter):
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="dino-train")
+    parser = argparse.ArgumentParser(
+        prog="dino-train",
+        description="Обучение NEAT в симуляторе Chrome Dino",
+    )
     parser.add_argument("--generations", type=int, default=50)
     parser.add_argument("--population", type=int, default=500)
     parser.add_argument("--max-steps", type=int, default=30000)
@@ -175,7 +178,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     for name in ("generations", "population", "max_steps", "episodes_per_gen", "curriculum_gens"):
         if getattr(args, name) < 1:
-            parser.error(f"--{name.replace('_', '-')} must be positive")
+            parser.error(f"--{name.replace('_', '-')} должно быть положительным")
     return args
 
 
@@ -212,7 +215,10 @@ def main(argv: list[str] | None = None) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("wb") as handle:
         pickle.dump(best, handle)
-    print(f"done: total={elapsed:.1f}s avg_gen={elapsed / args.generations:.2f}s")
+    print(
+        f"готово: всего={elapsed:.1f}с "
+        f"среднее_поколение={elapsed / args.generations:.2f}с"
+    )
 
 
 if __name__ == "__main__":

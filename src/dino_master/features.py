@@ -1,4 +1,4 @@
-"""Shared observation encoding and action helpers for Dino agents."""
+"""Общие признаки наблюдения и действия для агентов Dino."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def type_code(item: dict[str, Any] | None) -> int:
         if height >= 65:
             return TYPE_CODES["PTERODACTYL_MID"]
         return TYPE_CODES["PTERODACTYL_HIGH"]
-    raise ValueError(f"unknown obstacle type: {obstacle_type!r}")
+    raise ValueError(f"неизвестный тип препятствия: {obstacle_type!r}")
 
 
 def _has_obstacle(item: dict[str, Any] | None) -> bool:
@@ -90,7 +90,7 @@ def _width_feature(item: dict[str, Any] | None) -> float:
 
 def observation_features(obs: dict[str, Any]) -> list[float]:
     if obs.get("status") != "OK":
-        raise ValueError(f"observation status must be OK, got {obs.get('status')!r}")
+        raise ValueError(f"статус наблюдения должен быть OK, получен {obs.get('status')!r}")
 
     first = obs.get("first")
     second = obs.get("second")
@@ -124,12 +124,12 @@ def observation_features(obs: dict[str, Any]) -> list[float]:
     features.append(1.0 if dino.get("speedDrop") else 0.0)
 
     if len(features) != FEATURE_COUNT:
-        raise AssertionError(f"expected {FEATURE_COUNT} features, got {len(features)}")
+        raise AssertionError(f"ожидалось {FEATURE_COUNT} признаков, получено {len(features)}")
     return features
 
 
 def valid_actions(obs: dict[str, Any]) -> list[int]:
-    """Mask duck without an obstacle and jump while already airborne."""
+    """Маска: присед без препятствия и прыжок в воздухе запрещены."""
     actions = [0, 1, 2] if _has_obstacle(obs.get("first")) else [0, 1]
     if (obs.get("dino") or {}).get("jumping"):
         actions = [action for action in actions if action != 1]
@@ -137,7 +137,7 @@ def valid_actions(obs: dict[str, Any]) -> list[int]:
 
 
 def resolve_action(action: int, duck_remaining: int) -> tuple[int, int]:
-    """Keep duck held for a few frames; jump cancels the hold."""
+    """Удерживать присед несколько кадров; прыжок отменяет удержание."""
     if action == 1:
         return 1, 0
     if action == 2:
@@ -148,9 +148,9 @@ def resolve_action(action: int, duck_remaining: int) -> tuple[int, int]:
 
 
 def curriculum_speed(generation: int, stage_gens: int = 5) -> float | None:
-    """Fixed speed for 1-based generation; ``None`` means natural acceleration."""
+    """Фиксированная скорость для поколения (с 1); ``None`` — естественный разгон."""
     if stage_gens < 1:
-        raise ValueError(f"stage_gens must be positive, got {stage_gens}")
+        raise ValueError(f"stage_gens должно быть положительным, получено {stage_gens}")
     stage = max(0, (generation - 1) // stage_gens)
     if stage < len(CURRICULUM_SPEEDS):
         return CURRICULUM_SPEEDS[stage]

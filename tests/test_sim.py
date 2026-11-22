@@ -1,4 +1,4 @@
-"""Unit tests for the browser-free Dino simulator."""
+"""Unit-тесты симулятора Dino без браузера."""
 
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ def test_duck_does_not_get_cleared_on_ground() -> None:
     dino = sim.TRex()
     dino.apply_action(2, 6.0)
     assert dino.ducking is True
-    # update_frame is only for airborne physics; a grounded duck must persist.
+    # update_frame относится только к физике в воздухе; присед на земле сохраняется.
     dino.apply_action(0, 6.0)
     assert dino.ducking is False
 

@@ -1,4 +1,4 @@
-"""Evaluate a saved NEAT genome on the real Chrome Dino game."""
+"""Проверка сохранённого генома NEAT на реальной игре Chrome Dino."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def _chrome() -> str:
         found = shutil.which(name)
         if found:
             return found
-    raise RuntimeError("Chrome not found; set DINO_CHROME_EXECUTABLE")
+    raise RuntimeError("Chrome не найден; задайте DINO_CHROME_EXECUTABLE")
 
 
 START_GAME_JS = """() => {
@@ -244,7 +244,10 @@ async def run_episode(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="dino-eval")
+    parser = argparse.ArgumentParser(
+        prog="dino-eval",
+        description="Проверка генома NEAT на реальной игре Chrome Dino",
+    )
     parser.add_argument("--genome", default=DEFAULT_GENOME)
     parser.add_argument("--url", default=DEFAULT_URL)
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
@@ -255,9 +258,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default="eval.json")
     args = parser.parse_args(argv)
     if args.episodes < 1:
-        parser.error("--episodes must be positive")
+        parser.error("--episodes должно быть положительным")
     if args.max_steps < 1:
-        parser.error("--max-steps must be positive")
+        parser.error("--max-steps должно быть положительным")
     return args
 
 
