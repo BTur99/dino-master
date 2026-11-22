@@ -12,11 +12,15 @@ dependencies = [
 real = [
     "playwright>=1.45",
 ]
+viz = [
+    "pygame>=2.5",
+]
 
 [project.scripts]
 dino-train = "dino_master.train:main"
 dino-eval = "dino_master.real_game:cli"
 dino-spectate = "dino_master.spectate:cli"
+dino-visualize = "dino_master.visualize:cli"
 
 [dependency-groups]
 dev = [
@@ -53,4 +57,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "playwright.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pygame"
 ignore_missing_imports = true
