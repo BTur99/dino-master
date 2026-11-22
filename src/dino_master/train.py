@@ -14,7 +14,7 @@ import neat
 from . import features, sim
 
 FEATURE_COUNT = features.FEATURE_COUNT
-DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "neat.ini"
+DEFAULT_CONFIG = Path(__file__).with_name("neat.ini")
 
 EPISODE_STATS: dict[int, tuple[int, int]] = {}
 LAST_STATS: dict[str, float] = {}
@@ -74,7 +74,7 @@ def run_sim_episode(
             break
 
     fitness = [
-        features.herd_fitness(world.steps[i], world.clears[i], max_steps)
+        features.episode_fitness(world.steps[i], world.clears[i], max_steps)
         for i in range(count)
     ]
     stats = [(world.steps[i], world.clears[i]) for i in range(count)]
@@ -172,7 +172,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--best", default="models/best.pkl")
-    parser.add_argument("--fresh", action="store_true")
     args = parser.parse_args(argv)
     for name in ("generations", "population", "max_steps", "episodes_per_gen", "curriculum_gens"):
         if getattr(args, name) < 1:
@@ -182,8 +181,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    if args.fresh:
-        Path(args.best).unlink(missing_ok=True)
     config = neat.Config(
         neat.DefaultGenome,
         neat.DefaultReproduction,
@@ -192,7 +189,7 @@ def main(argv: list[str] | None = None) -> None:
         args.config,
     )
     config.pop_size = args.population
-    population = neat.Population(config)
+    population = neat.Population(config, seed=args.seed)
     population.add_reporter(neat.StdOutReporter(True))
     population.add_reporter(BestGenomeReporter(args.best))
 

@@ -11,7 +11,7 @@ import pytest
 
 from dino_master import features, train
 
-CONFIG_PATH = Path(__file__).resolve().parents[1] / "configs" / "neat.ini"
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "src" / "dino_master" / "neat.ini"
 
 
 def make_config() -> neat.Config:

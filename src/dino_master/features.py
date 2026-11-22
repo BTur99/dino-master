@@ -157,5 +157,5 @@ def curriculum_speed(generation: int, stage_gens: int = 5) -> float | None:
     return None
 
 
-def herd_fitness(steps: int, clears: int, max_steps: int) -> float:
+def episode_fitness(steps: int, clears: int, max_steps: int) -> float:
     return steps + 5 * clears + (TERMINAL_BONUS if steps >= max_steps else 0.0)

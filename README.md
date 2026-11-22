@@ -53,7 +53,7 @@ Training uses 4 independent episodes per generation and curriculum speeds
 ## Repo layout
 
 ```text
-configs/neat.ini       NEAT config (24 → 3, pop 500)
+src/dino_master/neat.ini  NEAT config (24 → 3, pop 500)
 models/                champion pickle
 results/               reproducibility evidence
 src/dino_master/       simulator, features, training, eval, spectator

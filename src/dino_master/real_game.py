@@ -18,7 +18,7 @@ from playwright.async_api import async_playwright
 from . import features
 
 DEFAULT_URL = "https://wayou.github.io/t-rex-runner/"
-DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "neat.ini"
+DEFAULT_CONFIG = Path(__file__).with_name("neat.ini")
 DEFAULT_GENOME = "models/champion-7553.pkl"
 PROFILE_DIR = Path(".chrome_profiles_eval")
 HEADLESS = os.environ.get("DINO_HEADLESS") == "1"
@@ -126,9 +126,7 @@ async def _launch(playwright: Any, *, headless: bool) -> Any:
         "no_viewport": True,
         "args": args,
     }
-    chrome = _chrome()
-    if chrome:
-        kwargs["executable_path"] = chrome
+    kwargs["executable_path"] = _chrome()
     return await playwright.chromium.launch_persistent_context(**kwargs)
 
 
@@ -307,6 +305,9 @@ async def main(argv: list[str] | None = None) -> None:
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    failed = [item for item in results if item["status"] not in {"DEAD", "MAX_STEPS"}]
+    if failed:
+        raise SystemExit(1)
 
 
 def cli() -> None:
