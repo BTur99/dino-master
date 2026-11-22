@@ -5,7 +5,7 @@ Chrome Dino NEAT agent trained in a **pure-Python simulator**, then verified on 
 ## Result
 
 The shipped champion (`models/champion-7553.pkl`) cleared **40,000 steps** on the public
-[wayou/t-rex-runner](https://wayou.github.io/t-rex-runner/) game:
+[wayou/t-rex-runner](https://wayou.github.io/t-rex-runner/) game. Reproduce with `dino-eval`:
 
 | run | steps | time at 60 Hz |
 |---|---:|---:|
@@ -27,7 +27,7 @@ uv run dino-train --generations 50 --population 500 --max-steps 30000 \
 # real-game evaluation (Google Chrome)
 uv sync --extra real
 uv run dino-eval --genome models/champion-7553.pkl --episodes 3 \
-  --max-steps 40000 --out results/eval.json
+  --max-steps 40000 --out eval.json
 
 # watch the champion play
 uv run dino-spectate --genome models/champion-7553.pkl
@@ -55,7 +55,6 @@ Training uses 4 independent episodes per generation and curriculum speeds
 ```text
 src/dino_master/neat.ini  NEAT config (24 → 3, pop 500)
 models/                champion pickle
-results/               reproducibility evidence
 src/dino_master/       simulator, features, training, eval, spectator
 tests/                 browser-free unit tests
 ```

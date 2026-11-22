@@ -252,7 +252,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-steps", type=int, default=40000)
     parser.add_argument("--step-delay", type=float, default=0.016)
     parser.add_argument("--headless", action="store_true")
-    parser.add_argument("--out", default="results/eval.json")
+    parser.add_argument("--out", default="eval.json")
     args = parser.parse_args(argv)
     if args.episodes < 1:
         parser.error("--episodes must be positive")
