@@ -17,6 +17,12 @@
 
 Геном совсем небольшой: 3 узла / 4 связи.
 
+## Демо
+
+Живая страница: **https://btur99.github.io/dino-master/**
+
+Она крутит копию оригинальной игры и управляет ею экспортированной сетью чемпиона.
+
 ## Быстрый старт
 
 ```bash
@@ -56,6 +62,8 @@ uv run dino-spectate --genome models/champion-7553.pkl
 src/dino_master/neat.ini  конфиг NEAT (24 → 3, pop 500)
 models/                   pickle чемпиона
 src/dino_master/          симулятор, признаки, обучение, eval, spectator
+docs/                     GitHub Pages: игра + JS-контроллер чемпиона
+scripts/export_champion.py экспорт pkl → docs/champion.json
 tests/                    unit-тесты без браузера
 ```
 
