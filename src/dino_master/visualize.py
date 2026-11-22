@@ -446,9 +446,13 @@ def run(args: argparse.Namespace) -> None:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
-                    if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                    if (
+                        event.key == pygame.K_ESCAPE
+                        or event.key == pygame.K_q
+                        or event.scancode == pygame.KSCAN_Q
+                    ):
                         running = False
-                    elif event.key == pygame.K_r:
+                    elif event.key == pygame.K_r or event.scancode == pygame.KSCAN_R:
                         best_steps = max(best_steps, world.steps[0])
                         episode += 1
                         pilot.reset()
