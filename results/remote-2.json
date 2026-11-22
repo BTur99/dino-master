@@ -1,0 +1,9 @@
+[
+  {
+    "key": 7553,
+    "fitness": 45025.0,
+    "steps": 40000,
+    "clears": 805,
+    "path": "neat-sim-30k.pkl"
+  }
+]
