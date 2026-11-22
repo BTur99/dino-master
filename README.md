@@ -1,4 +1,4 @@
-# dino_master
+# dino-master
 
 Chrome Dino NEAT agent trained in a **pure-Python simulator**, then verified on the real game.
 
