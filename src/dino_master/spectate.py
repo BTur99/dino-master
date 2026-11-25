@@ -47,7 +47,7 @@ async def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--url", default=real_game.DEFAULT_URL)
     parser.add_argument("--config", default=str(real_game.DEFAULT_CONFIG))
     parser.add_argument("--max-steps", type=int, default=40000)
-    parser.add_argument("--step-delay", type=float, default=0.016)
+    parser.add_argument("--step-delay", type=float, default=real_game.STEP_DELAY)
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args(argv)
 
@@ -60,9 +60,13 @@ async def main(argv: list[str] | None = None) -> None:
     )
     best_path = Path(args.genome)
     async with async_playwright() as playwright:
-        context = await real_game._launch(
-            playwright, headless=bool(args.headless or real_game.HEADLESS)
-        )
+        try:
+            context = await real_game._launch(
+                playwright, headless=bool(args.headless or real_game.HEADLESS)
+            )
+        except (PlaywrightError, RuntimeError) as error:
+            print(f"ошибка браузера: {error}")
+            raise SystemExit(1) from error
         try:
             page = context.pages[0] if context.pages else await context.new_page()
             await page.add_init_script(real_game._RATE_LIMIT_JS)

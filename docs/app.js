@@ -24,7 +24,6 @@ const state = {
   duckRemaining: 0,
   jumpCooldown: 0,
   drawTick: 0,
-  lastTick: 0,
   tickScheduled: false,
 };
 
@@ -248,35 +247,50 @@ function scheduleRestart(message) {
   }, 900);
 }
 
-// Видимое окно на 120/240 Гц вызывает rAF чаще 60 раз в секунду. Игра
-// увеличивает скорость на каждом кадре, поэтому её нужно ограничить 60 Гц.
+// Видимое окно на 90/120/144/240 Гц вызывает rAF с разной частотой. Игра
+// увеличивает скорость на каждом кадре, поэтому её нужно вести ровно 60 Гц.
+// setTimeout-планировщик не зависит от частоты монитора; cancelAnimationFrame
+// отменяет pending timer.
 function limitGameFrameRate(win) {
   if (!win || win.__dinoRafLimited) return;
   win.__dinoRafLimited = true;
-  const nativeRaf = win.requestAnimationFrame.bind(win);
-  let last = 0;
-  win.requestAnimationFrame = (callback) => nativeRaf((timestamp) => {
-    if (timestamp - last >= 16) {
-      last = timestamp;
-      callback(timestamp);
-    } else {
-      win.requestAnimationFrame(callback);
+  const nativeSetTimeout = win.setTimeout.bind(win);
+  const nativeClearTimeout = win.clearTimeout.bind(win);
+  const nativeCancel = win.cancelAnimationFrame.bind(win);
+  const pending = new Map();
+  let nextId = 1;
+  const frameMs = 1000 / 60;
+  win.requestAnimationFrame = (callback) => {
+    const id = nextId++;
+    const state = { timer: 0, active: true };
+    pending.set(id, state);
+    state.timer = nativeSetTimeout(() => {
+      if (!state.active) return;
+      state.active = false;
+      pending.delete(id);
+      callback(win.performance.now());
+    }, frameMs);
+    return id;
+  };
+  win.cancelAnimationFrame = (id) => {
+    const state = pending.get(id);
+    if (!state) {
+      nativeCancel(id);
+      return;
     }
-  });
+    state.active = false;
+    nativeClearTimeout(state.timer);
+    pending.delete(id);
+  };
 }
 
 function scheduleTick() {
   if (state.tickScheduled) return;
   state.tickScheduled = true;
-  requestAnimationFrame(function run(timestamp) {
-    if (timestamp - state.lastTick < 16) {
-      requestAnimationFrame(run);
-      return;
-    }
-    state.lastTick = timestamp;
+  setTimeout(() => {
     state.tickScheduled = false;
     tick();
-  });
+  }, 1000 / 60);
 }
 
 function tick() {

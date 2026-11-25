@@ -23,6 +23,7 @@ DEFAULT_CONFIG = Path(__file__).with_name("neat.ini")
 DEFAULT_GENOME = "models/champion-7553.pkl"
 PROFILE_DIR = Path(".chrome_profiles_eval")
 HEADLESS = os.environ.get("DINO_HEADLESS") == "1"
+STEP_DELAY = 1.0 / 60.0
 
 
 def _chrome() -> str:
@@ -60,7 +61,6 @@ START_GAME_JS = """() => {
     r.containerEl.style.height = r.dimensions.HEIGHT + "px";
   }
   if (!r.playing && typeof r.play === "function") r.play();
-  r.update();
   return Boolean(r.playing);
 }"""
 
@@ -147,23 +147,41 @@ _FOCUS_JS = """() => {
   return document.hasFocus();
 }"""
 
-# Видимое окно на 120/240 Гц вызывает requestAnimationFrame чаще 60 раз в
-# секунду. Chrome Dino увеличивает currentSpeed на каждом кадре, поэтому на
-# высокогерцовом мониторе игра разгоняется в несколько раз быстрее, чем в
-# симуляторе. Этот shim пропускает не более одного кадра за ~16 мс.
+# Видимое окно на 90/120/144/240 Гц вызывает requestAnimationFrame с разной
+# частотой. Chrome Dino увеличивает currentSpeed на каждом кадре, поэтому
+# игру нужно вести ровно на 60 Гц. setTimeout-планировщик не зависит от
+# частоты монитора; cancelAnimationFrame отменяет и pending timer.
 _RATE_LIMIT_JS = """(() => {
   if (window.__dinoRafLimited) return;
   window.__dinoRafLimited = true;
-  const nativeRaf = window.requestAnimationFrame.bind(window);
-  let last = 0;
-  window.requestAnimationFrame = (callback) => nativeRaf((timestamp) => {
-    if (timestamp - last >= 16) {
-      last = timestamp;
-      callback(timestamp);
-    } else {
-      window.requestAnimationFrame(callback);
+  const nativeSetTimeout = window.setTimeout.bind(window);
+  const nativeClearTimeout = window.clearTimeout.bind(window);
+  const nativeCancel = window.cancelAnimationFrame.bind(window);
+  const pending = new Map();
+  let nextId = 1;
+  const frameMs = 1000 / 60;
+  window.requestAnimationFrame = (callback) => {
+    const id = nextId++;
+    const state = {timer: 0, active: true};
+    pending.set(id, state);
+    state.timer = nativeSetTimeout(() => {
+      if (!state.active) return;
+      state.active = false;
+      pending.delete(id);
+      callback(window.performance.now());
+    }, frameMs);
+    return id;
+  };
+  window.cancelAnimationFrame = (id) => {
+    const state = pending.get(id);
+    if (!state) {
+      nativeCancel(id);
+      return;
     }
-  });
+    state.active = false;
+    nativeClearTimeout(state.timer);
+    pending.delete(id);
+  };
 })();"""
 
 
@@ -287,7 +305,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--episodes", type=int, default=1)
     parser.add_argument("--max-steps", type=int, default=40000)
-    parser.add_argument("--step-delay", type=float, default=0.016)
+    parser.add_argument("--step-delay", type=float, default=STEP_DELAY)
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--out", default="eval.json")
     args = parser.parse_args(argv)
@@ -313,7 +331,13 @@ async def main(argv: list[str] | None = None) -> None:
     results: list[dict[str, Any]] = []
 
     async with async_playwright() as playwright:
-        context = await _launch(playwright, headless=bool(args.headless or HEADLESS))
+        try:
+            context = await _launch(
+                playwright, headless=bool(args.headless or HEADLESS)
+            )
+        except (PlaywrightError, RuntimeError) as error:
+            print(f"ошибка браузера: {error}")
+            raise SystemExit(1) from error
         try:
             page = context.pages[0] if context.pages else await context.new_page()
             await page.add_init_script(_RATE_LIMIT_JS)
