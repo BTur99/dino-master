@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import neat
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import async_playwright
 
 from . import real_game
@@ -64,6 +65,7 @@ async def main(argv: list[str] | None = None) -> None:
         )
         try:
             page = context.pages[0] if context.pages else await context.new_page()
+            await page.add_init_script(real_game._RATE_LIMIT_JS)
             await page.goto(args.url, wait_until="domcontentloaded", timeout=30_000)
             await real_game._wait_runner(page)
             await real_game._focus(context, page)
@@ -96,8 +98,15 @@ async def main(argv: list[str] | None = None) -> None:
                     f"шаги={steps} статус={status}"
                 )
                 await real_game._sleep(0.5)
+        except PlaywrightError as error:
+            if type(error).__name__ == "TargetClosedError":
+                print(f"окно закрыто: {error}")
+            else:
+                print(f"ошибка браузера: {error}")
+                raise SystemExit(1) from error
         finally:
-            await context.close()
+            with contextlib.suppress(Exception):
+                await context.close()
 
 
 def cli() -> None:

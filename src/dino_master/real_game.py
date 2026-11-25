@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import neat
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import async_playwright
 
 from . import features
@@ -141,11 +142,41 @@ async def _wait_runner(page: Any) -> None:
     )
 
 
+_FOCUS_JS = """() => {
+  window.focus();
+  return document.hasFocus();
+}"""
+
+# Видимое окно на 120/240 Гц вызывает requestAnimationFrame чаще 60 раз в
+# секунду. Chrome Dino увеличивает currentSpeed на каждом кадре, поэтому на
+# высокогерцовом мониторе игра разгоняется в несколько раз быстрее, чем в
+# симуляторе. Этот shim пропускает не более одного кадра за ~16 мс.
+_RATE_LIMIT_JS = """(() => {
+  if (window.__dinoRafLimited) return;
+  window.__dinoRafLimited = true;
+  const nativeRaf = window.requestAnimationFrame.bind(window);
+  let last = 0;
+  window.requestAnimationFrame = (callback) => nativeRaf((timestamp) => {
+    if (timestamp - last >= 16) {
+      last = timestamp;
+      callback(timestamp);
+    } else {
+      window.requestAnimationFrame(callback);
+    }
+  });
+})();"""
+
+
 async def _focus(context: Any, page: Any) -> None:
     with contextlib.suppress(Exception):
         cdp = await context.new_cdp_session(page)
         await cdp.send("Emulation.setFocusEmulationEnabled", {"enabled": True})
         await cdp.send("Page.setWebLifecycleState", {"state": "active"})
+    # Видимое окно может открыться за другими окнами; без фокуса Chrome
+    # начинает троттлить rAF, и агент теряет синхронизацию с игрой.
+    with contextlib.suppress(Exception):
+        await page.bring_to_front()
+        await page.evaluate(_FOCUS_JS)
 
 
 async def _style(page: Any) -> None:
@@ -285,6 +316,7 @@ async def main(argv: list[str] | None = None) -> None:
         context = await _launch(playwright, headless=bool(args.headless or HEADLESS))
         try:
             page = context.pages[0] if context.pages else await context.new_page()
+            await page.add_init_script(_RATE_LIMIT_JS)
             await page.goto(args.url, wait_until="domcontentloaded", timeout=30_000)
             await _wait_runner(page)
             await _focus(context, page)
@@ -305,8 +337,15 @@ async def main(argv: list[str] | None = None) -> None:
                 }
                 results.append(result)
                 print(json.dumps(result))
+        except PlaywrightError as error:
+            if type(error).__name__ == "TargetClosedError":
+                print(f"окно закрыто: {error}")
+                return
+            print(f"ошибка браузера: {error}")
+            raise SystemExit(1) from error
         finally:
-            await context.close()
+            with contextlib.suppress(Exception):
+                await context.close()
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

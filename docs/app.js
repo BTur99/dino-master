@@ -24,6 +24,8 @@ const state = {
   duckRemaining: 0,
   jumpCooldown: 0,
   drawTick: 0,
+  lastTick: 0,
+  tickScheduled: false,
 };
 
 const clamp = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
@@ -177,6 +179,7 @@ function prepareFrame() {
   // Оригинальная игра создаёт canvas внутри #main-frame-error.
   // Поэтому контейнер нельзя скрывать display:none — только чистим offline-контент.
   const doc = frame.contentDocument;
+  limitGameFrameRate(frame.contentWindow);
   const body = doc.body;
   body.style.margin = "0";
   body.style.width = "600px";
@@ -241,8 +244,39 @@ function scheduleRestart(message) {
   setTimeout(() => {
     state.episode += 1;
     restartGame();
-    requestAnimationFrame(tick);
+    scheduleTick();
   }, 900);
+}
+
+// Видимое окно на 120/240 Гц вызывает rAF чаще 60 раз в секунду. Игра
+// увеличивает скорость на каждом кадре, поэтому её нужно ограничить 60 Гц.
+function limitGameFrameRate(win) {
+  if (!win || win.__dinoRafLimited) return;
+  win.__dinoRafLimited = true;
+  const nativeRaf = win.requestAnimationFrame.bind(win);
+  let last = 0;
+  win.requestAnimationFrame = (callback) => nativeRaf((timestamp) => {
+    if (timestamp - last >= 16) {
+      last = timestamp;
+      callback(timestamp);
+    } else {
+      win.requestAnimationFrame(callback);
+    }
+  });
+}
+
+function scheduleTick() {
+  if (state.tickScheduled) return;
+  state.tickScheduled = true;
+  requestAnimationFrame(function run(timestamp) {
+    if (timestamp - state.lastTick < 16) {
+      requestAnimationFrame(run);
+      return;
+    }
+    state.lastTick = timestamp;
+    state.tickScheduled = false;
+    tick();
+  });
 }
 
 function tick() {
@@ -284,7 +318,7 @@ function tick() {
     scheduleRestart(`${MAX_STEPS} шагов — новый эпизод`);
     return;
   }
-  requestAnimationFrame(tick);
+  scheduleTick();
 }
 
 async function waitForGame() {
@@ -310,7 +344,7 @@ async function boot() {
     state.runner = await waitForGame();
     restartGame();
     setStatus("Играет");
-    requestAnimationFrame(tick);
+    scheduleTick();
   } catch (error) {
     console.error(error);
     setStatus(`Ошибка: ${error.message}`, true);
@@ -322,7 +356,7 @@ ui.restart.addEventListener("click", () => {
   state.running = false;
   state.pending = false;
   restartGame();
-  requestAnimationFrame(tick);
+  scheduleTick();
 });
 
 frame.addEventListener("load", boot, { once: true });
