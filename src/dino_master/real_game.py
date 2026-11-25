@@ -160,16 +160,23 @@ _RATE_LIMIT_JS = """(() => {
   const pending = new Map();
   let nextId = 1;
   const frameMs = 1000 / 60;
+  let nextFrame = window.performance.now();
   window.requestAnimationFrame = (callback) => {
     const id = nextId++;
     const state = {timer: 0, active: true};
     pending.set(id, state);
+    const now = window.performance.now();
+    if (nextFrame < now) nextFrame = now;
+    const delay = nextFrame - now;
     state.timer = nativeSetTimeout(() => {
       if (!state.active) return;
       state.active = false;
       pending.delete(id);
-      callback(window.performance.now());
-    }, frameMs);
+      nextFrame += frameMs;
+      const after = window.performance.now();
+      if (nextFrame < after) nextFrame = after + frameMs;
+      callback(after);
+    }, delay);
     return id;
   };
   window.cancelAnimationFrame = (id) => {
@@ -183,6 +190,12 @@ _RATE_LIMIT_JS = """(() => {
     pending.delete(id);
   };
 })();"""
+
+
+def is_target_closed(error: BaseException) -> bool:
+    """Вернуть True для закрытого окна/браузера Playwright."""
+
+    return type(error).__name__ == "TargetClosedError"
 
 
 async def _focus(context: Any, page: Any) -> None:
@@ -336,6 +349,9 @@ async def main(argv: list[str] | None = None) -> None:
                 playwright, headless=bool(args.headless or HEADLESS)
             )
         except (PlaywrightError, RuntimeError) as error:
+            if is_target_closed(error):
+                print(f"окно закрыто: {error}")
+                raise SystemExit(0) from error
             print(f"ошибка браузера: {error}")
             raise SystemExit(1) from error
         try:
@@ -362,7 +378,7 @@ async def main(argv: list[str] | None = None) -> None:
                 results.append(result)
                 print(json.dumps(result))
         except PlaywrightError as error:
-            if type(error).__name__ == "TargetClosedError":
+            if is_target_closed(error):
                 print(f"окно закрыто: {error}")
                 return
             print(f"ошибка браузера: {error}")

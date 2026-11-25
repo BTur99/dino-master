@@ -29,6 +29,7 @@ const state = {
 
 const clamp = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let nextTick = performance.now();
 
 function typeCode(item) {
   if (!item || !item.type) return 0;
@@ -260,16 +261,23 @@ function limitGameFrameRate(win) {
   const pending = new Map();
   let nextId = 1;
   const frameMs = 1000 / 60;
+  let nextFrame = win.performance.now();
   win.requestAnimationFrame = (callback) => {
     const id = nextId++;
     const state = { timer: 0, active: true };
     pending.set(id, state);
+    const now = win.performance.now();
+    if (nextFrame < now) nextFrame = now;
+    const wait = nextFrame - now;
     state.timer = nativeSetTimeout(() => {
       if (!state.active) return;
       state.active = false;
       pending.delete(id);
-      callback(win.performance.now());
-    }, frameMs);
+      nextFrame += frameMs;
+      const after = win.performance.now();
+      if (nextFrame < after) nextFrame = after + frameMs;
+      callback(after);
+    }, wait);
     return id;
   };
   win.cancelAnimationFrame = (id) => {
@@ -287,10 +295,15 @@ function limitGameFrameRate(win) {
 function scheduleTick() {
   if (state.tickScheduled) return;
   state.tickScheduled = true;
+  const now = performance.now();
+  if (nextTick < now) nextTick = now;
   setTimeout(() => {
     state.tickScheduled = false;
+    nextTick += 1000 / 60;
+    const after = performance.now();
+    if (nextTick < after) nextTick = after + 1000 / 60;
     tick();
-  }, 1000 / 60);
+  }, nextTick - now);
 }
 
 function tick() {

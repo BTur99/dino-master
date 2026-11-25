@@ -65,6 +65,9 @@ async def main(argv: list[str] | None = None) -> None:
                 playwright, headless=bool(args.headless or real_game.HEADLESS)
             )
         except (PlaywrightError, RuntimeError) as error:
+            if real_game.is_target_closed(error):
+                print(f"окно закрыто: {error}")
+                raise SystemExit(0) from error
             print(f"ошибка браузера: {error}")
             raise SystemExit(1) from error
         try:
@@ -103,7 +106,7 @@ async def main(argv: list[str] | None = None) -> None:
                 )
                 await real_game._sleep(0.5)
         except PlaywrightError as error:
-            if type(error).__name__ == "TargetClosedError":
+            if real_game.is_target_closed(error):
                 print(f"окно закрыто: {error}")
             else:
                 print(f"ошибка браузера: {error}")
